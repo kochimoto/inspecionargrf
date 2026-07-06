@@ -176,7 +176,7 @@ router.post('/:id/resolve', authenticateToken, authorizeRoles('Administrador'), 
       const dbPath = publicUrlData.publicUrl;
 
       await runAsync(
-        'INSERT INTO inspection_photos (inspection_item_id, photo_path, type) VALUES (?, ?, "reparo")',
+        "INSERT INTO inspection_photos (inspection_item_id, photo_path, type) VALUES (?, ?, 'reparo')",
         [pendency.inspection_item_id, dbPath]
       );
     }

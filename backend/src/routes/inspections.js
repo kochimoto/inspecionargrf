@@ -136,7 +136,7 @@ router.post('/items/:inspection_id/:item_id', authenticateToken, upload.array('p
       const dbPath = publicUrlData.publicUrl;
 
       await runAsync(
-        'INSERT INTO inspection_photos (inspection_item_id, photo_path, type) VALUES (?, ?, "defeito")',
+        "INSERT INTO inspection_photos (inspection_item_id, photo_path, type) VALUES (?, ?, 'defeito')",
         [inspectionItemId, dbPath]
       );
     }
