@@ -111,7 +111,11 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
   }
 });
 
-// Start Express App
-app.listen(PORT, () => {
-  console.log(`Backend server is running on port ${PORT}`);
-});
+// Start Express App (only if running locally, not on Vercel)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Backend server is running on port ${PORT}`);
+  });
+}
+
+export default app;
