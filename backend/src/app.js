@@ -90,7 +90,7 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
       JOIN checklist_items ci ON ii.item_id = ci.id
       JOIN checklist_categories cc ON ci.category_id = cc.id
       WHERE ii.status = 'Defeito'
-      GROUP BY ii.item_id
+      GROUP BY ii.item_id, ci.name, cc.name
       ORDER BY defect_count DESC
       LIMIT 5
     `);
