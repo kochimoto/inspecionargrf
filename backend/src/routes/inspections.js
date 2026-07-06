@@ -40,7 +40,7 @@ router.post('/start', authenticateToken, async (req, res) => {
     }
 
     // Set vehicle status to 'Em inspeção'
-    await runAsync('UPDATE vehicles SET status = "Em inspeção", updated_at = CURRENT_TIMESTAMP WHERE id = ?', [vehicle_id]);
+    await runAsync("UPDATE vehicles SET status = 'Em inspeção', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [vehicle_id]);
     
     // Log history
     await runAsync(
@@ -164,7 +164,7 @@ router.post('/items/:inspection_id/:item_id', authenticateToken, upload.array('p
 
       if (inspection) {
         await runAsync(
-          'UPDATE vehicles SET status = "Com pendências", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          "UPDATE vehicles SET status = 'Com pendências', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
           [inspection.vehicle_id]
         );
       }
@@ -180,7 +180,7 @@ router.post('/items/:inspection_id/:item_id', authenticateToken, upload.array('p
         );
         if (otherDefects.count === 0) {
           await runAsync(
-            'UPDATE vehicles SET status = "Em inspeção", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            "UPDATE vehicles SET status = 'Em inspeção', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             [inspection.vehicle_id]
           );
         }

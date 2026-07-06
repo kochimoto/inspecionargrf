@@ -148,7 +148,7 @@ router.post('/:id/resolve', authenticateToken, authorizeRoles('Administrador'), 
     // Update pendency record to Resolved
     await runAsync(
       `UPDATE pendencies 
-       SET status = "Resolvido", resolved_by = ?, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+       SET status = 'Resolvido', resolved_by = ?, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
       [req.user.id, id]
     );
@@ -205,7 +205,7 @@ router.post('/:id/resolve', authenticateToken, authorizeRoles('Administrador'), 
     if (remaining.count === 0) {
       // Transition vehicle to "Pronto para venda"
       await runAsync(
-        'UPDATE vehicles SET status = "Pronto para venda", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        "UPDATE vehicles SET status = 'Pronto para venda', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
         [pendency.vehicle_id]
       );
 
