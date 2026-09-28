@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  role        String       @default("INSPECTOR") // ADMIN or INSPECTOR
+  inspections Inspection[]
+}
+
+model Vehicle {
+  id           String       @id @default(cuid())
+  licensePlate String       @unique
+  make         String?
+  model        String?
+  year         Int?
+  inspections  Inspection[]
+}
+
+model Inspection {
+  id          String           @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle          @relation(fields: [vehicleId], references: [id])
+  inspectorId String
+  inspector   User             @relation(fields: [inspectorId], references: [id])
+  km          Int
+  value       Float
+  status      String           @default("PENDING") // PENDING, APPROVED, REJECTED
+  signature   String?          // Base64 string for MVP
+  items       InspectionItem[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model InspectionItem {
+  id           String     @id @default(cuid())
+  inspectionId String
+  inspection   Inspection @relation(fields: [inspectionId], references: [id])
+  category     String
+  name         String
+  status       String     // OK, ALERT, DEFECT
+  observation  String?
+  photos       Photo[]
+}
+
+model Photo {
+  id               String         @id @default(cuid())
+  inspectionItemId String
+  inspectionItem   InspectionItem @relation(fields: [inspectionItemId], references: [id])
+  url              String         // Base64 string or url
+}

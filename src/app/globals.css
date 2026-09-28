@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  
+  /* Status colors */
+  --color-status-ok: #10b981; /* Emerald 500 */
+  --color-status-ok-muted: rgba(16, 185, 129, 0.2);
+  --color-status-alert: #f59e0b; /* Amber 500 */
+  --color-status-alert-muted: rgba(245, 158, 11, 0.2);
+  --color-status-defect: #ef4444; /* Red 500 */
+  --color-status-defect-muted: rgba(239, 68, 68, 0.2);
+}
+
+:root {
+  /* Default to dark mode colors */
+  --background: #09090b; /* Zinc 950 */
+  --foreground: #fafafa; /* Zinc 50 */
+  --card: #09090b;
+  --card-foreground: #fafafa;
+  --popover: #09090b;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fafafa;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #d4d4d8;
+  --radius: 0.5rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  @apply bg-zinc-900/60 backdrop-blur-md border border-zinc-800/50 shadow-xl;
+}
+
+.glass-card {
+  @apply bg-zinc-800/40 backdrop-blur-sm border border-zinc-700/30 rounded-xl overflow-hidden transition-all duration-300;
+}
+
+.glass-card:hover {
+  @apply bg-zinc-800/60 border-zinc-600/50 shadow-lg shadow-black/20;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Smooth micro-animations */
+.btn-interactive {
+  @apply transition-all duration-200 active:scale-95;
+}
