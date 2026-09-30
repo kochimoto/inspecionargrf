@@ -136,23 +136,29 @@ export default function InspectorPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const allItems = categories.flatMap((cat) =>
-      cat.items.map((item) => ({ ...item, category: cat.category }))
-    );
+    try {
+      const allItems = categories.flatMap((cat) =>
+        cat.items.map((item) => ({ ...item, category: cat.category }))
+      );
 
-    const result = await submitInspection({
-      licensePlate,
-      km: parseInt(km.replace(/\D/g, ""), 10),
-      value: parseFloat(vehicleValue) / 100,
-      signature,
-      items: allItems,
-    });
+      const result = await submitInspection({
+        licensePlate,
+        km: parseInt(km.replace(/\D/g, ""), 10),
+        value: parseFloat(vehicleValue) / 100,
+        signature,
+        items: allItems,
+      });
 
-    setIsSubmitting(false);
-    if (result.success) {
-      setStep("done");
-    } else {
-      setError(result.error || "Erro desconhecido.");
+      if (result.success) {
+        setStep("done");
+      } else {
+        setError(result.error || "Erro desconhecido.");
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Erro de conexão. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
