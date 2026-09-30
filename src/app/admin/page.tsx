@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ClipboardList, CheckCircle2, Clock, AlertTriangle, XCircle, Car } from "lucide-react";
-
-const prisma = new PrismaClient();
 
 async function getStats() {
   const [total, pending, approved, rejected, alertCount] = await Promise.all([
@@ -53,7 +51,16 @@ function formatDate(date: Date) {
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, inspections] = await Promise.all([getStats(), getInspections()]);
+  let stats = { total: 0, pending: 0, approved: 0, rejected: 0, alertCount: 0 };
+  let inspections: Awaited<ReturnType<typeof getInspections>> = [];
+  let dbError: string | null = null;
+
+  try {
+    [stats, inspections] = await Promise.all([getStats(), getInspections()]);
+  } catch (err) {
+    console.error("Admin DB error:", err);
+    dbError = err instanceof Error ? err.message : "Erro ao conectar com o banco de dados.";
+  }
 
   const statCards = [
     { label: "Total de Vistorias", value: stats.total, icon: ClipboardList, color: "text-blue-400", bg: "bg-blue-500/10" },
@@ -88,6 +95,12 @@ export default async function AdminDashboard() {
           <h2 className="text-3xl font-bold text-white">Dashboard</h2>
           <p className="text-zinc-400 mt-1">Visão geral das vistorias automotivas</p>
         </div>
+
+        {dbError && (
+          <div className="mb-6 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+            <strong>Erro de banco de dados:</strong> {dbError}
+          </div>
+        )}
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
