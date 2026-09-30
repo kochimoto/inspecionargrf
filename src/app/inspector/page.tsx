@@ -7,6 +7,7 @@ import { LicensePlateInput } from "@/components/LicensePlateInput";
 import { Checklist, CategoryData, ItemData } from "@/components/Checklist";
 import { SignaturePad } from "@/components/SignaturePad";
 import { submitInspection } from "@/app/actions";
+import { InspectionPdfButton } from "@/components/InspectionPdfButton";
 
 const INITIAL_CATEGORIES: CategoryData[] = [
   {
@@ -92,6 +93,7 @@ export default function InspectorPage() {
   const [signature, setSignature] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submittedInspectionId, setSubmittedInspectionId] = useState<string | null>(null);
 
   const handleItemChange = useCallback((id: string, updates: Partial<ItemData>) => {
     setCategories((prev) =>
@@ -150,6 +152,7 @@ export default function InspectorPage() {
       });
 
       if (result.success) {
+        setSubmittedInspectionId(result.id ?? null);
         setStep("done");
       } else {
         setError(result.error || "Erro desconhecido.");
@@ -163,16 +166,36 @@ export default function InspectorPage() {
   };
 
   if (step === "done") {
+    const resetForm = () => {
+      setStep("form");
+      setCategories(INITIAL_CATEGORIES);
+      setLicensePlate("");
+      setKm("");
+      setVehicleValue("");
+      setSignature(null);
+      setSubmittedInspectionId(null);
+    };
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-[#09090b]">
-        <div className="glass-card p-10 text-center max-w-sm w-full flex flex-col items-center gap-6 border border-emerald-800/30">
+        <div className="glass-card p-10 text-center max-w-sm w-full flex flex-col items-center gap-5 border border-emerald-800/30">
           <div className="w-20 h-20 bg-[var(--color-status-ok-muted)] rounded-full flex items-center justify-center animate-bounce">
             <CheckCircle size={44} className="text-[var(--color-status-ok)]" />
           </div>
           <h1 className="text-2xl font-bold text-white">Vistoria Enviada!</h1>
           <p className="text-zinc-400 text-sm">Sua vistoria foi enviada com sucesso e está aguardando aprovação do administrador.</p>
+
+          {submittedInspectionId && (
+            <a
+              href={`/admin/inspection/${submittedInspectionId}`}
+              className="w-full flex items-center justify-center gap-2 bg-zinc-700 hover:bg-zinc-600 text-white py-3 rounded-xl font-semibold transition-colors text-sm"
+            >
+              Ver Laudo Completo →
+            </a>
+          )}
+
           <button
-            onClick={() => { setStep("form"); setCategories(INITIAL_CATEGORIES); setLicensePlate(""); setKm(""); setVehicleValue(""); setSignature(null); }}
+            onClick={resetForm}
             className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-xl font-semibold btn-interactive"
           >
             Nova Vistoria
