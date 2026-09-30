@@ -20,6 +20,9 @@ export async function submitInspection(data: any) {
       create: { licensePlate: data.licensePlate }
     });
 
+    // Filter out items with no status (safety check)
+    const validItems = (data.items as any[]).filter((item) => item.status !== null && item.status !== undefined);
+
     // Create Inspection
     const inspection = await prisma.inspection.create({
       data: {
@@ -29,11 +32,11 @@ export async function submitInspection(data: any) {
         value: data.value,
         signature: data.signature,
         items: {
-          create: data.items.map((item: any) => ({
+          create: validItems.map((item: any) => ({
             category: item.category,
             name: item.name,
             status: item.status,
-            observation: item.observation,
+            observation: item.observation ?? null,
             photos: item.photoUrl ? {
               create: { url: item.photoUrl }
             } : undefined
@@ -46,6 +49,7 @@ export async function submitInspection(data: any) {
     return { success: true, id: inspection.id };
   } catch (error) {
     console.error("Failed to submit inspection:", error);
-    return { success: false, error: "Falha ao enviar vistoria." };
+    const msg = error instanceof Error ? error.message : "Erro desconhecido.";
+    return { success: false, error: `Falha ao enviar vistoria: ${msg}` };
   }
 }

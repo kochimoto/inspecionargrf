@@ -32,11 +32,22 @@ function ChecklistItem({ item, onChange }: ChecklistItemProps) {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onChange(item.id, { photoUrl: event.target?.result as string });
+      const file = e.target.files[0];
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 800;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+        onChange(item.id, { photoUrl: compressed });
+        URL.revokeObjectURL(objectUrl);
       };
-      reader.readAsDataURL(e.target.files[0]);
+      img.src = objectUrl;
     }
   };
 
