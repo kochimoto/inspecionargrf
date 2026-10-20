@@ -1,13 +1,24 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Car, Gauge, DollarSign, Send, ClipboardCheck } from "lucide-react";
 import { LicensePlateInput } from "@/components/LicensePlateInput";
 import { Checklist, CategoryData, ItemData } from "@/components/Checklist";
 import { SignaturePad } from "@/components/SignaturePad";
-import { submitInspection } from "@/app/actions";
+import { submitInspection, addItemPhoto } from "@/app/actions";
 import { InspectionPdfButton } from "@/components/InspectionPdfButton";
+
+/** Rejects if the promise does not settle within `ms` (avoids an infinite "Enviando..."). */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Tempo esgotado")), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); }
+    );
+  });
+}
 
 const INITIAL_CATEGORIES: CategoryData[] = [
   {
@@ -94,6 +105,8 @@ export default function InspectorPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedInspectionId, setSubmittedInspectionId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
+  const pendingRef = useRef<{ id: string; itemIdMap: Record<string, string>; uploaded: Set<string> } | null>(null);
 
   const handleItemChange = useCallback((id: string, updates: Partial<ItemData>) => {
     setCategories((prev) =>
@@ -143,25 +156,61 @@ export default function InspectorPage() {
         cat.items.map((item) => ({ ...item, category: cat.category }))
       );
 
-      const result = await submitInspection({
-        licensePlate,
-        km: parseInt(km.replace(/\D/g, ""), 10),
-        value: parseFloat(vehicleValue) / 100,
-        signature,
-        items: allItems,
-      });
-
-      if (result.success) {
-        setSubmittedInspectionId(result.id ?? null);
-        setStep("done");
-      } else {
-        setError(result.error || "Erro desconhecido.");
+      // 1) Create inspection + items (no photos) — only once, even on retry
+      if (!pendingRef.current) {
+        setProgress("Salvando vistoria...");
+        const result = await withTimeout(
+          submitInspection({
+            licensePlate,
+            km: parseInt(km.replace(/\D/g, ""), 10),
+            value: parseFloat(vehicleValue) / 100,
+            signature,
+            items: allItems.map(({ id, category, name, status, observation }) => ({
+              id, category, name, status, observation: observation ?? null,
+            })),
+          }),
+          30000
+        );
+        if (!result.success) {
+          setError(result.error || "Erro desconhecido.");
+          return;
+        }
+        pendingRef.current = { id: result.id, itemIdMap: result.itemIdMap, uploaded: new Set() };
       }
+
+      // 2) Upload photos one by one (keeps each request small)
+      const pending = pendingRef.current;
+      const photos = allItems.filter((i) => i.photoUrl && pending.itemIdMap[i.id]);
+      for (let idx = 0; idx < photos.length; idx++) {
+        const item = photos[idx];
+        if (pending.uploaded.has(item.id)) continue;
+        setProgress(`Enviando fotos ${idx + 1}/${photos.length}...`);
+        let lastErr = "";
+        let ok = false;
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          try {
+            const r = await withTimeout(addItemPhoto(pending.itemIdMap[item.id], item.photoUrl!), 30000);
+            if (r.success) ok = true; else lastErr = r.error;
+          } catch (e) {
+            lastErr = e instanceof Error ? e.message : String(e);
+          }
+        }
+        if (!ok) {
+          setError(`Falha ao enviar a foto "${item.name}" (${lastErr}). Toque em enviar novamente para continuar.`);
+          return;
+        }
+        pending.uploaded.add(item.id);
+      }
+
+      setSubmittedInspectionId(pending.id);
+      pendingRef.current = null;
+      setStep("done");
     } catch (e) {
       console.error(e);
-      setError("Erro de conexão. Tente novamente.");
+      setError("Erro de conexão ou tempo esgotado. Tente novamente.");
     } finally {
       setIsSubmitting(false);
+      setProgress(null);
     }
   };
 
@@ -394,7 +443,7 @@ export default function InspectorPage() {
               className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg btn-interactive transition-colors flex items-center justify-center gap-3"
             >
               <Send size={20} />
-              {isSubmitting ? "Enviando..." : "Enviar para Aprovação"}
+              {isSubmitting ? (progress ?? "Enviando...") : "Enviar para Aprovação"}
             </button>
           </div>
         )}
