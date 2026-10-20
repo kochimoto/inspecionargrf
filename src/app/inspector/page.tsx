@@ -75,8 +75,22 @@ const INITIAL_CATEGORIES: CategoryData[] = [
       { id: "mec-3", name: "Sistema de Freios", status: null, photoUrl: null },
       { id: "mec-4", name: "Suspensão", status: null, photoUrl: null },
       { id: "mec-5", name: "Direção", status: null, photoUrl: null },
-      { id: "mec-6", name: "Elétrica (Luzes)", status: null, photoUrl: null, requirePhotoAlways: true },
       { id: "mec-7", name: "Escapamento / Silencioso", status: null, photoUrl: null },
+    ],
+  },
+  {
+    category: "Elétrica / Luzes",
+    items: [
+      { id: "mec-6", name: "Elétrica (Luzes)", status: null, photoUrl: null, requirePhotoAlways: true },
+      { id: "luz-1", name: "Luz Baixa", status: null, photoUrl: null },
+      { id: "luz-2", name: "Luz Alta", status: null, photoUrl: null },
+      { id: "luz-3", name: "Luz de Freio", status: null, photoUrl: null },
+      { id: "luz-4", name: "Luz de Placa", status: null, photoUrl: null },
+      { id: "luz-5", name: "Seta Dianteira Direita", status: null, photoUrl: null },
+      { id: "luz-6", name: "Seta Dianteira Esquerda", status: null, photoUrl: null },
+      { id: "luz-7", name: "Seta Traseira Direita", status: null, photoUrl: null },
+      { id: "luz-8", name: "Seta Traseira Esquerda", status: null, photoUrl: null },
+      { id: "luz-9", name: "Farol de Neblina", status: null, photoUrl: null },
     ],
   },
   {
