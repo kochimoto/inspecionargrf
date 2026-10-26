@@ -1,6 +1,8 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET || "grf-auto-car-internal-secret-key-2026",
+  trustHost: true,
   pages: {
     signIn: "/login",
   },

@@ -2,12 +2,11 @@
 
 import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Car, Lock, Mail, LogIn, ShieldCheck, UserCheck } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const errorParam = searchParams.get("error");
@@ -32,15 +31,15 @@ function LoginForm() {
       redirect: false,
     });
 
-    setLoading(false);
-
     if (res?.error) {
+      setLoading(false);
       setError("E-mail ou PIN inválidos.");
       return;
     }
 
-    router.push(callbackUrl);
-    router.refresh();
+    const defaultDest = email.toLowerCase().trim() === "admin@grf.com" ? "/admin" : "/inspector";
+    const targetUrl = callbackUrl && callbackUrl !== "/" ? callbackUrl : defaultDest;
+    window.location.href = targetUrl;
   };
 
   const selectQuickProfile = (role: "INSPECTOR" | "ADMIN") => {

@@ -30,46 +30,70 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const adminPin = process.env.ADMIN_PIN || "admin123";
         const inspectorPin = process.env.INSPECTOR_PIN || "1234";
 
-        // Seed default users if not yet in DB
+        // Seed default users if not yet in DB (with fallback so cold-start DB never blocks login)
         if (email === "admin@grf.com" && pin === adminPin) {
-          const user = await prisma.user.upsert({
-            where: { email: "admin@grf.com" },
-            update: { role: "ADMIN" },
-            create: {
+          try {
+            const user = await prisma.user.upsert({
+              where: { email: "admin@grf.com" },
+              update: { role: "ADMIN" },
+              create: {
+                name: "Administrador GRF",
+                email: "admin@grf.com",
+                role: "ADMIN",
+              },
+            });
+            return { id: user.id, name: user.name, email: user.email, role: user.role };
+          } catch (err) {
+            console.error("DB upsert fallback for admin:", err);
+            return {
+              id: "admin-fallback",
               name: "Administrador GRF",
               email: "admin@grf.com",
               role: "ADMIN",
-            },
-          });
-          return { id: user.id, name: user.name, email: user.email, role: user.role };
+            };
+          }
         }
 
         if (email === "joao@grf.com" && pin === inspectorPin) {
-          const user = await prisma.user.upsert({
-            where: { email: "joao@grf.com" },
-            update: { role: "INSPECTOR" },
-            create: {
+          try {
+            const user = await prisma.user.upsert({
+              where: { email: "joao@grf.com" },
+              update: { role: "INSPECTOR" },
+              create: {
+                name: "João Vistoriador",
+                email: "joao@grf.com",
+                role: "INSPECTOR",
+              },
+            });
+            return { id: user.id, name: user.name, email: user.email, role: user.role };
+          } catch (err) {
+            console.error("DB upsert fallback for inspector:", err);
+            return {
+              id: "inspector-fallback",
               name: "João Vistoriador",
               email: "joao@grf.com",
               role: "INSPECTOR",
-            },
-          });
-          return { id: user.id, name: user.name, email: user.email, role: user.role };
+            };
+          }
         }
 
         // Check existing database user by email
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (!existingUser) return null;
+        try {
+          const existingUser = await prisma.user.findUnique({ where: { email } });
+          if (!existingUser) return null;
 
-        const expectedPin = existingUser.role === "ADMIN" ? adminPin : inspectorPin;
-        if (pin !== expectedPin) return null;
+          const expectedPin = existingUser.role === "ADMIN" ? adminPin : inspectorPin;
+          if (pin !== expectedPin) return null;
 
-        return {
-          id: existingUser.id,
-          name: existingUser.name,
-          email: existingUser.email,
-          role: existingUser.role,
-        };
+          return {
+            id: existingUser.id,
+            name: existingUser.name,
+            email: existingUser.email,
+            role: existingUser.role,
+          };
+        } catch {
+          return null;
+        }
       },
     }),
   ],
