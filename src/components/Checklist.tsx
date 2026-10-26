@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Camera, ChevronDown, ChevronUp, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { compressImageFile } from "@/lib/image";
 
 export type Status = "OK" | "ALERT" | "DEFECT" | null;
 
@@ -26,135 +27,137 @@ interface ChecklistItemProps {
 }
 
 function ChecklistItem({ item, onChange }: ChecklistItemProps) {
+  const [compressing, setCompressing] = useState(false);
+
   const handleStatusChange = (status: Status) => {
     onChange(item.id, { status });
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        const MAX = 800;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.7);
-        onChange(item.id, { photoUrl: compressed });
-        URL.revokeObjectURL(objectUrl);
-      };
-      img.src = objectUrl;
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCompressing(true);
+    try {
+      const compressed = await compressImageFile(file, 1600, 0.7);
+      onChange(item.id, { photoUrl: compressed });
+    } catch (err) {
+      console.error("Failed to compress item photo:", err);
+    } finally {
+      setCompressing(false);
+      e.target.value = "";
     }
   };
 
-  const requirePhoto = item.requirePhotoAlways || item.status === "ALERT" || item.status === "DEFECT";
+  const requirePhoto = item.requirePhotoAlways;
   const missingPhoto = requirePhoto && !item.photoUrl;
 
   return (
-    <div className="py-3 border-b border-zinc-800/50 flex flex-col gap-3">
-      <div className="flex justify-between items-center">
-        <span className="font-medium text-sm sm:text-base text-zinc-200">{item.name}</span>
-        
-        <div className="flex items-center gap-1 sm:gap-2">
+    <div className="py-4 border-b border-zinc-800/50 last:border-b-0 flex flex-col gap-3">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2.5">
+        <span className="font-medium text-base text-zinc-200">{item.name}</span>
+
+        <div className="grid grid-cols-3 sm:flex items-center gap-2">
           {/* OK Button */}
           <button
             type="button"
             onClick={() => handleStatusChange("OK")}
             className={cn(
-              "p-2 rounded-md border btn-interactive flex items-center justify-center",
-              item.status === "OK" 
-                ? "bg-[var(--color-status-ok-muted)] border-[var(--color-status-ok)] text-[var(--color-status-ok)]" 
-                : "bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300"
+              "py-2.5 px-3 rounded-lg border btn-interactive flex items-center justify-center gap-1.5 text-xs font-semibold min-h-[44px]",
+              item.status === "OK"
+                ? "bg-[var(--color-status-ok-muted)] border-[var(--color-status-ok)] text-[var(--color-status-ok)]"
+                : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-zinc-200"
             )}
           >
-            <CheckCircle size={20} />
+            <CheckCircle size={18} />
+            <span>OK / Bom</span>
           </button>
-          
+
           {/* ALERT Button */}
           <button
             type="button"
             onClick={() => handleStatusChange("ALERT")}
             className={cn(
-              "p-2 rounded-md border btn-interactive flex items-center justify-center",
-              item.status === "ALERT" 
-                ? "bg-[var(--color-status-alert-muted)] border-[var(--color-status-alert)] text-[var(--color-status-alert)]" 
-                : "bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300"
+              "py-2.5 px-3 rounded-lg border btn-interactive flex items-center justify-center gap-1.5 text-xs font-semibold min-h-[44px]",
+              item.status === "ALERT"
+                ? "bg-[var(--color-status-alert-muted)] border-[var(--color-status-alert)] text-[var(--color-status-alert)]"
+                : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-zinc-200"
             )}
           >
-            <AlertTriangle size={20} />
+            <AlertTriangle size={18} />
+            <span>Atenção</span>
           </button>
-          
+
           {/* DEFECT Button */}
           <button
             type="button"
             onClick={() => handleStatusChange("DEFECT")}
             className={cn(
-              "p-2 rounded-md border btn-interactive flex items-center justify-center",
-              item.status === "DEFECT" 
-                ? "bg-[var(--color-status-defect-muted)] border-[var(--color-status-defect)] text-[var(--color-status-defect)]" 
-                : "bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300"
+              "py-2.5 px-3 rounded-lg border btn-interactive flex items-center justify-center gap-1.5 text-xs font-semibold min-h-[44px]",
+              item.status === "DEFECT"
+                ? "bg-[var(--color-status-defect-muted)] border-[var(--color-status-defect)] text-[var(--color-status-defect)]"
+                : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-zinc-200"
             )}
           >
-            <XCircle size={20} />
+            <XCircle size={18} />
+            <span>Defeito / Falta</span>
           </button>
         </div>
       </div>
 
-      {item.status === "ALERT" && (
-        <div>
+      {/* Observation + Optional Photo row */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder={
+            item.status === "ALERT" || item.status === "DEFECT"
+              ? "Descreva a observação ou avaria..."
+              : "Observação opcional..."
+          }
+          value={item.observation || ""}
+          onChange={(e) => onChange(item.id, { observation: e.target.value })}
+          className={cn(
+            "flex-1 bg-zinc-900 border rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition-colors",
+            (item.status === "ALERT" || item.status === "DEFECT") && !item.observation
+              ? "border-amber-500/50 focus:border-amber-500"
+              : "border-zinc-800 focus:border-blue-500"
+          )}
+        />
+
+        <label
+          title="Anexar foto do item"
+          className={cn(
+            "cursor-pointer p-2.5 rounded-lg border transition-colors flex items-center justify-center gap-1.5 min-h-[42px] px-3 text-xs font-medium flex-shrink-0",
+            item.photoUrl
+              ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400"
+              : missingPhoto
+              ? "bg-[var(--color-status-defect-muted)] border-[var(--color-status-defect)] text-[var(--color-status-defect)]"
+              : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+          )}
+        >
+          <Camera size={18} />
+          <span className="hidden sm:inline">{compressing ? "..." : item.photoUrl ? "Trocar" : "Foto"}</span>
           <input
-            type="text"
-            placeholder="Adicione uma observação (obrigatório para Atenção)..."
-            value={item.observation || ""}
-            onChange={(e) => onChange(item.id, { observation: e.target.value })}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[var(--color-status-alert)] focus:ring-1 focus:ring-[var(--color-status-alert)]"
-          />
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        {missingPhoto && (
-          <span className="text-xs text-[var(--color-status-defect)] animate-pulse">
-            * Foto obrigatória
-          </span>
-        )}
-        {!missingPhoto && item.photoUrl && (
-          <span className="text-xs text-[var(--color-status-ok)] flex items-center gap-1">
-            <CheckCircle size={12} /> Foto anexada
-          </span>
-        )}
-        {!missingPhoto && !item.photoUrl && <span className="text-xs"></span>}
-
-        <label className={cn(
-          "cursor-pointer p-2 rounded-full transition-colors flex items-center justify-center",
-          item.photoUrl ? "bg-zinc-800 text-zinc-300" : (missingPhoto ? "bg-[var(--color-status-defect-muted)] text-[var(--color-status-defect)] ring-1 ring-[var(--color-status-defect)]" : "bg-zinc-900 text-zinc-500 hover:text-zinc-300")
-        )}>
-          <Camera size={20} />
-          <input 
-            type="file" 
-            accept="image/*" 
+            type="file"
+            accept="image/*"
             capture="environment"
-            className="hidden" 
-            onChange={handlePhotoUpload} 
+            className="hidden"
+            onChange={handlePhotoUpload}
           />
         </label>
       </div>
-      
+
       {item.photoUrl && (
-         <div className="mt-2 relative w-full h-32 rounded-md overflow-hidden border border-zinc-700">
-           <img src={item.photoUrl} alt={`Foto de ${item.name}`} className="object-cover w-full h-full" />
-           <button 
-             type="button"
-             onClick={() => onChange(item.id, { photoUrl: null })}
-             className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white hover:bg-black"
-           >
-             <XCircle size={16} />
-           </button>
-         </div>
+        <div className="relative w-full h-36 rounded-lg overflow-hidden border border-zinc-700">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.photoUrl} alt={`Foto de ${item.name}`} className="object-cover w-full h-full" />
+          <button
+            type="button"
+            onClick={() => onChange(item.id, { photoUrl: null })}
+            className="absolute top-2 right-2 bg-black/70 rounded-full p-1.5 text-white hover:bg-black"
+          >
+            <XCircle size={18} />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -166,28 +169,62 @@ interface ChecklistCategoryProps {
   defaultOpen?: boolean;
 }
 
-function ChecklistCategory({ categoryData, onChange, defaultOpen = false }: ChecklistCategoryProps) {
+function ChecklistCategory({ categoryData, onChange, defaultOpen = true }: ChecklistCategoryProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const completed = categoryData.items.filter(i => i.status !== null).length;
+  const completed = categoryData.items.filter((i) => i.status !== null).length;
   const total = categoryData.items.length;
   const isAllCompleted = completed === total;
 
+  const handleMarkAllOk = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    categoryData.items.forEach((item) => {
+      if (item.status === null) {
+        onChange(item.id, { status: "OK" });
+      }
+    });
+  };
+
   return (
     <div className="glass-card mb-4">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between bg-zinc-800/40 hover:bg-zinc-800/60 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <span className="font-semibold text-lg text-zinc-100">{categoryData.category}</span>
-          <span className={cn("text-xs px-2 py-1 rounded-full", isAllCompleted ? "bg-[var(--color-status-ok-muted)] text-[var(--color-status-ok)]" : "bg-zinc-700 text-zinc-300")}>
+      <div className="w-full px-4 py-3.5 flex items-center justify-between bg-zinc-800/40">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-3 flex-1 text-left"
+        >
+          <span className="font-semibold text-base sm:text-lg text-zinc-100">{categoryData.category}</span>
+          <span
+            className={cn(
+              "text-xs px-2.5 py-0.5 rounded-full font-semibold",
+              isAllCompleted
+                ? "bg-[var(--color-status-ok-muted)] text-[var(--color-status-ok)]"
+                : "bg-zinc-700 text-zinc-300"
+            )}
+          >
             {completed}/{total}
           </span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          {!isAllCompleted && (
+            <button
+              type="button"
+              onClick={handleMarkAllOk}
+              className="text-xs bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg font-medium transition-colors"
+            >
+              Marcar restantes OK
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 text-zinc-400 hover:text-white"
+          >
+            {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
         </div>
-        {isOpen ? <ChevronUp className="text-zinc-400" /> : <ChevronDown className="text-zinc-400" />}
-      </button>
+      </div>
 
       {isOpen && (
         <div className="px-4 pb-2">
@@ -208,12 +245,12 @@ interface ChecklistProps {
 export function Checklist({ categories, onChange }: ChecklistProps) {
   return (
     <div className="w-full">
-      {categories.map((cat, index) => (
-        <ChecklistCategory 
-          key={cat.category} 
-          categoryData={cat} 
+      {categories.map((cat) => (
+        <ChecklistCategory
+          key={cat.category}
+          categoryData={cat}
           onChange={onChange}
-          defaultOpen={index === 0} 
+          defaultOpen={true}
         />
       ))}
     </div>

@@ -7,36 +7,137 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MovementType {
+  ENTRY
+  EXIT
+}
+
+enum MovementReason {
+  PURCHASE
+  CONSIGNMENT
+  TRADE_IN
+  SALE
+  RETURN
+  WORKSHOP
+  OTHER
+}
+
+enum ItemStatus {
+  OK
+  ALERT
+  DEFECT
+}
+
+enum InspectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DamageType {
+  SCRATCH
+  DENT
+  CRACK
+  MISSING_PART
+  OTHER
+}
+
+enum PhotoAngle {
+  FRONT
+  REAR
+  LEFT
+  RIGHT
+  FRONT_LEFT
+  FRONT_RIGHT
+  REAR_LEFT
+  REAR_RIGHT
+  DASHBOARD
+  INTERIOR
+  TRUNK
+  CHASSIS_PLATE
+  EXTRA
+}
+
 model User {
-  id          String       @id @default(cuid())
-  name        String
-  email       String       @unique
-  role        String       @default("INSPECTOR") // ADMIN or INSPECTOR
-  inspections Inspection[]
+  id                  String       @id @default(cuid())
+  name                String
+  email               String       @unique
+  role                String       @default("INSPECTOR") // ADMIN or INSPECTOR
+  inspections         Inspection[] @relation("InspectorInspections")
+  approvedInspections Inspection[] @relation("ApprovedInspections")
+  movements           Movement[]
 }
 
 model Vehicle {
   id           String       @id @default(cuid())
   licensePlate String       @unique
+  chassis      String?
+  renavam      String?
   make         String?
   model        String?
   year         Int?
+  color        String?
   inspections  Inspection[]
+  movements    Movement[]
+
+  @@index([licensePlate])
+}
+
+model Movement {
+  id          String         @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id])
+  type        MovementType
+  reason      MovementReason
+  km          Int
+  fuelLevel   Int            @default(0) // 0-100
+  personName  String
+  personDoc   String?
+  signature   String?
+  notes       String?
+  inspectorId String
+  inspector   User           @relation(fields: [inspectorId], references: [id])
+  inspection  Inspection?
+  damages     Damage[]
+  photos      Photo[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([vehicleId, createdAt])
+}
+
+model Damage {
+  id         String     @id @default(cuid())
+  movementId String
+  movement   Movement   @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  area       String
+  x          Float      // 0-100 relative coordinate
+  y          Float      // 0-100 relative coordinate
+  type       DamageType
+  notes      String?
+  photoId    String?
+  photo      Photo?     @relation(fields: [photoId], references: [id])
 }
 
 model Inspection {
-  id          String           @id @default(cuid())
-  vehicleId   String
-  vehicle     Vehicle          @relation(fields: [vehicleId], references: [id])
-  inspectorId String
-  inspector   User             @relation(fields: [inspectorId], references: [id])
-  km          Int
-  value       Float
-  status      String           @default("PENDING") // PENDING, APPROVED, REJECTED
-  signature   String?          // Base64 string for MVP
-  items       InspectionItem[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  vehicleId       String
+  vehicle         Vehicle          @relation(fields: [vehicleId], references: [id])
+  inspectorId     String
+  inspector       User             @relation("InspectorInspections", fields: [inspectorId], references: [id])
+  movementId      String?          @unique
+  movement        Movement?        @relation(fields: [movementId], references: [id])
+  km              Int
+  value           Float
+  status          InspectionStatus @default(PENDING)
+  signature       String?          // Base64 string for MVP
+  approvedById    String?
+  approvedBy      User?            @relation("ApprovedInspections", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectionReason String?
+  items           InspectionItem[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
 model InspectionItem {
@@ -45,14 +146,18 @@ model InspectionItem {
   inspection   Inspection @relation(fields: [inspectionId], references: [id])
   category     String
   name         String
-  status       String     // OK, ALERT, DEFECT
+  status       ItemStatus
   observation  String?
   photos       Photo[]
 }
 
 model Photo {
-  id               String         @id @default(cuid())
-  inspectionItemId String
-  inspectionItem   InspectionItem @relation(fields: [inspectionItemId], references: [id])
-  url              String         // Base64 string or url
+  id               String          @id @default(cuid())
+  inspectionItemId String?
+  inspectionItem   InspectionItem? @relation(fields: [inspectionItemId], references: [id])
+  movementId       String?
+  movement         Movement?       @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  angle            PhotoAngle      @default(EXTRA)
+  url              String          // Base64 string or url
+  damages          Damage[]
 }
