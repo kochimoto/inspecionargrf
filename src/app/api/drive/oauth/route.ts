@@ -17,12 +17,13 @@ const SCOPE = "https://www.googleapis.com/auth/drive.file";
  * Step 3: Authorize Google → the page shows the GOOGLE_DRIVE_REFRESH_TOKEN to copy into Vercel.
  */
 export async function GET(request: Request) {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session?.user || role !== "ADMIN") {
-    return new Response("Acesso restrito ao administrador. Faça login em /login primeiro.", {
-      status: 403,
-    });
+  // If a refresh token is already configured in production, require ADMIN session
+  if (process.env.GOOGLE_DRIVE_REFRESH_TOKEN) {
+    const session = await auth();
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    if (!session?.user || role !== "ADMIN") {
+      return new Response("Google Drive já está conectado.", { status: 403 });
+    }
   }
 
   const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
