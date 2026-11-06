@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PhotoCompareGrid } from "@/components/PhotoCompareGrid";
 import { DamageMap, DamageItem, DAMAGE_TYPE_LABELS } from "@/components/DamageMap";
+import { PhotoGallery } from "@/components/PhotoGallery";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -323,11 +324,9 @@ export default async function MovementComparePage({ params }: PageProps) {
                         </span>
                       </div>
                       {dmg.photoUrl && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={dmg.photoUrl}
-                          alt={dmg.area}
-                          className="w-16 h-12 object-cover rounded border border-zinc-700"
+                        <PhotoGallery
+                          photos={[{ url: dmg.photoUrl, label: `Nova avaria: ${dmg.area}` }]}
+                          thumbClassName="w-16 h-12 object-cover rounded border border-zinc-700"
                         />
                       )}
                     </div>

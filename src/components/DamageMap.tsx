@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import { Camera, Edit2, Trash2, X, PlusCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/image";
+import { PhotoGallery } from "@/components/PhotoGallery";
 
 export type DamageTypeKey = "SCRATCH" | "DENT" | "CRACK" | "MISSING_PART" | "OTHER";
 
@@ -417,12 +418,10 @@ export function DamageMap({
                       <p className="text-xs text-zinc-300 mt-1">{dmg.notes}</p>
                     )}
                     {dmg.photoUrl && (
-                      <div className="mt-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={dmg.photoUrl}
-                          alt={`Avaria ${dmg.area}`}
-                          className="w-24 h-16 object-cover rounded-md border border-zinc-700"
+                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                        <PhotoGallery
+                          photos={[{ url: dmg.photoUrl, label: `Avaria ${dmg.area}` }]}
+                          thumbClassName="w-24 h-16 object-cover rounded-md border border-zinc-700"
                         />
                       </div>
                     )}

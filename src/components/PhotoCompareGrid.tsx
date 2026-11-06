@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { ZoomIn, X } from "lucide-react";
+import { Download, ExternalLink, ZoomIn, X } from "lucide-react";
 import { REQUIRED_PHOTO_ANGLES } from "@/components/RequiredPhotos";
+import { getDriveFileId } from "@/components/PhotoGallery";
 
 interface PhotoCompareGridProps {
   entryPhotosByAngle: Record<string, string>;
@@ -133,7 +134,32 @@ export function PhotoCompareGrid({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-emerald-400 uppercase">Foto da Entrada</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-400 uppercase">
+                  Foto da Entrada
+                </span>
+                {zoomed.entryUrl && (
+                  <div className="flex items-center gap-2">
+                    {getDriveFileId(zoomed.entryUrl) && (
+                      <a
+                        href={`https://drive.google.com/file/d/${getDriveFileId(zoomed.entryUrl)}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        <ExternalLink size={12} /> Drive
+                      </a>
+                    )}
+                    <a
+                      href={zoomed.entryUrl}
+                      download={`entrada_${zoomed.label}.jpg`}
+                      className="flex items-center gap-1 text-xs text-zinc-300 hover:text-white"
+                    >
+                      <Download size={12} /> Baixar
+                    </a>
+                  </div>
+                )}
+              </div>
               {zoomed.entryUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -149,7 +175,30 @@ export function PhotoCompareGrid({
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-amber-400 uppercase">Foto da Saída</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-400 uppercase">Foto da Saída</span>
+                {zoomed.exitUrl && (
+                  <div className="flex items-center gap-2">
+                    {getDriveFileId(zoomed.exitUrl) && (
+                      <a
+                        href={`https://drive.google.com/file/d/${getDriveFileId(zoomed.exitUrl)}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        <ExternalLink size={12} /> Drive
+                      </a>
+                    )}
+                    <a
+                      href={zoomed.exitUrl}
+                      download={`saida_${zoomed.label}.jpg`}
+                      className="flex items-center gap-1 text-xs text-zinc-300 hover:text-white"
+                    >
+                      <Download size={12} /> Baixar
+                    </a>
+                  </div>
+                )}
+              </div>
               {zoomed.exitUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img

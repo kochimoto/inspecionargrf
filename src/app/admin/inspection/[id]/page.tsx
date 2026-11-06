@@ -14,11 +14,14 @@ import {
   User,
   GitCompare,
   FileText,
+  FolderOpen,
 } from "lucide-react";
+import { isDriveEnabled } from "@/lib/drive";
 import { InspectionPdfButton } from "@/components/InspectionPdfButton";
 import { InspectionReviewActions } from "@/components/InspectionReviewActions";
 import { DamageMap, DamageItem } from "@/components/DamageMap";
 import { PHOTO_ANGLE_LABELS } from "@/components/RequiredPhotos";
+import { PhotoGallery } from "@/components/PhotoGallery";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -181,6 +184,17 @@ export default async function InspectionDetailPage({ params }: PageProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {isDriveEnabled() && (
+            <a
+              href={`/api/drive/plate/${inspection.vehicle.licensePlate}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold"
+              title="Abrir pasta desta placa no Google Drive"
+            >
+              <FolderOpen size={15} /> Pasta no Drive
+            </a>
+          )}
           {mov && mov.type === "EXIT" && (
             <Link
               href={`/admin/movements/${mov.id}/compare`}
@@ -281,24 +295,15 @@ export default async function InspectionDetailPage({ params }: PageProps) {
             <h3 className="text-base font-bold text-white">
               Galeria de Fotos por Ângulo ({movementPhotos.length})
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              {movementPhotos.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex flex-col gap-1 bg-zinc-900/70 rounded-xl p-2 border border-zinc-800"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={p.url}
-                    alt={PHOTO_ANGLE_LABELS[p.angle] ?? p.angle}
-                    className="w-full h-28 object-cover rounded-lg"
-                  />
-                  <span className="text-[11px] text-zinc-300 font-medium text-center truncate">
-                    {PHOTO_ANGLE_LABELS[p.angle] ?? p.angle}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <PhotoGallery
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"
+              thumbClassName="w-full h-28 object-cover rounded-lg"
+              showLabels
+              photos={movementPhotos.map((p) => ({
+                url: p.url,
+                label: PHOTO_ANGLE_LABELS[p.angle] ?? p.angle,
+              }))}
+            />
           </div>
         )}
 
@@ -372,17 +377,15 @@ export default async function InspectionDetailPage({ params }: PageProps) {
                         <p className="text-xs text-zinc-400 italic">Obs: {item.observation}</p>
                       )}
                       {item.photos.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {item.photos.map((photo, idx) => (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              key={idx}
-                              src={photo.url}
-                              alt={`Foto ${item.name}`}
-                              className="w-28 h-20 object-cover rounded-lg border border-zinc-700"
-                            />
-                          ))}
-                        </div>
+                        <PhotoGallery
+                          photos={item.photos.map((photo, idx) => ({
+                            url: photo.url,
+                            label:
+                              item.photos.length > 1
+                                ? `${item.name} (${idx + 1})`
+                                : item.name,
+                          }))}
+                        />
                       )}
                     </div>
                   );

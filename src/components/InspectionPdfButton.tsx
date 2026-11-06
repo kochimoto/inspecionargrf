@@ -123,7 +123,54 @@ function formatDate(date: Date) {
   }).format(new Date(date));
 }
 
-export function InspectionPdfButton({ inspection, label = "Baixar PDF" }: Props) {
+/** jsPDF needs base64 images: convert remote URLs (e.g. Google Drive proxy) to data URLs. */
+async function toDataUrl(url: string): Promise<string> {
+  if (!url || url.startsWith("data:")) return url;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return "";
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return "";
+  }
+}
+
+async function resolvePhotoUrls(data: InspectionData): Promise<InspectionData> {
+  const resolvePhotos = (photos: Photo[] = []) =>
+    Promise.all(photos.map(async (p) => ({ ...p, url: await toDataUrl(p.url) })));
+
+  const [items, movPhotos, damages] = await Promise.all([
+    Promise.all(
+      data.items.map(async (item) => ({
+        ...item,
+        photos: (await resolvePhotos(item.photos)).filter((p) => p.url),
+      }))
+    ),
+    resolvePhotos(data.movement?.photos),
+    Promise.all(
+      (data.movement?.damages ?? []).map(async (d) => ({
+        ...d,
+        photo: d.photo ? { url: await toDataUrl(d.photo.url) } : d.photo,
+      }))
+    ),
+  ]);
+
+  return {
+    ...data,
+    items,
+    movement: data.movement
+      ? { ...data.movement, photos: movPhotos.filter((p) => p.url), damages }
+      : data.movement,
+  };
+}
+
+export function InspectionPdfButton({ inspection: rawInspection, label = "Baixar PDF" }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleDownload = async () => {
@@ -131,6 +178,7 @@ export function InspectionPdfButton({ inspection, label = "Baixar PDF" }: Props)
     try {
       const { default: jsPDF } = await import("jspdf");
       const QRCode = await import("qrcode");
+      const inspection = await resolvePhotoUrls(rawInspection);
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = 210;

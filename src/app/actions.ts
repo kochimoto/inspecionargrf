@@ -13,6 +13,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { isDriveEnabled, uploadPhotoToDrive, driveFileUrl } from "@/lib/drive";
 
 // ── Auth Helpers ─────────────────────────────────────────────────────────────
 
@@ -347,12 +348,55 @@ export async function submitInspection(data: LegacySubmitInspectionInput) {
 
 // ── Photo Upload Actions (one per photo to avoid body size limits) ───────────
 
+/**
+ * Stores a photo in Google Drive (folder per license plate) when configured.
+ * Returns the URL to persist in Photo.url. Falls back to the original base64
+ * data URL if Drive is not configured or the upload fails, so the inspection
+ * flow never breaks.
+ */
+async function storePhoto(
+  dataUrl: string,
+  movementId: string | null | undefined,
+  baseName: string
+): Promise<string> {
+  if (!isDriveEnabled() || !movementId || !dataUrl.startsWith("data:")) return dataUrl;
+  try {
+    const movement = await prisma.movement.findUnique({
+      where: { id: movementId },
+      select: { type: true, createdAt: true, vehicle: { select: { licensePlate: true } } },
+    });
+    if (!movement) return dataUrl;
+    const fileId = await uploadPhotoToDrive({
+      dataUrl,
+      baseName,
+      folder: {
+        licensePlate: movement.vehicle.licensePlate,
+        movementType: movement.type,
+        createdAt: movement.createdAt,
+      },
+    });
+    return driveFileUrl(fileId);
+  } catch (error) {
+    console.error("Google Drive upload failed, storing in DB instead:", error);
+    return dataUrl;
+  }
+}
+
 /** Attaches a single photo (base64 data URL) to an inspection item. */
 export async function addItemPhoto(inspectionItemId: string, url: string) {
   try {
     await requireSessionUser(["INSPECTOR", "ADMIN"]);
+    const item = await prisma.inspectionItem.findUnique({
+      where: { id: inspectionItemId },
+      select: { name: true, inspection: { select: { movementId: true } } },
+    });
+    const storedUrl = await storePhoto(
+      url,
+      item?.inspection.movementId,
+      `Checklist ${item?.name ?? "item"}`
+    );
     await prisma.photo.create({
-      data: { inspectionItemId, angle: "EXTRA", url },
+      data: { inspectionItemId, angle: "EXTRA", url: storedUrl },
     });
     return { success: true as const };
   } catch (error) {
@@ -370,8 +414,9 @@ export async function addMovementPhoto(
 ) {
   try {
     await requireSessionUser(["INSPECTOR", "ADMIN"]);
+    const storedUrl = await storePhoto(url, movementId, angle);
     await prisma.photo.create({
-      data: { movementId, angle, url },
+      data: { movementId, angle, url: storedUrl },
     });
     return { success: true as const };
   } catch (error) {
@@ -389,11 +434,16 @@ export async function addDamagePhoto(
 ) {
   try {
     await requireSessionUser(["INSPECTOR", "ADMIN"]);
+    const damage = await prisma.damage.findUnique({
+      where: { id: damageId },
+      select: { area: true },
+    });
+    const storedUrl = await storePhoto(url, movementId, `Avaria ${damage?.area ?? ""}`);
     const photo = await prisma.photo.create({
       data: {
         movementId,
         angle: "EXTRA",
-        url,
+        url: storedUrl,
       },
     });
     await prisma.damage.update({
